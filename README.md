@@ -45,14 +45,26 @@ As strings, booleans and numbers are immutible, this behavior applies only to Ar
 
 Fired when the connection to the server/peers has been made and the RealtimeJSON object is ready to be edited.
 
+```javascript
+
+RealtimeJSON.on('ready', handler);
+
+```
+
 ## change
 
-Fired whenever a change comes in to the object or one of it's sub-objects. One change event will be fired for each object/subobject which has changed and the event handler will be called with arguments: (parentObj, key, newValue).
-
-* **parentObj** is the a proxy to object or array which has had a value changed.
-
-* **key** a string representation of the key, in an array this will be a stringified number such as "1" "2" or "3", in an object this will be the value which can be used to lookup the property, always a string.
+Fired whenever a change comes in to the object or one of it's sub-objects. One change event will be fired for each object/subobject which has changed and an event handler can be called for each specific key with an argument newValue. If no keyPath is specified, the event handler will be called for each change in the object.
 
 * **newValue** is the new value of the changed string, boolean, number, null, object or list.
+
+```javascript
+
+RealtimeJSON.on('change', handler);
+
+RealtimeJSON.on('change', keyPath, handler);
+
+```
+
+* **keyPath** when specified, the event handler will only be applied when that specific key has changed.
 
 Because of string immutibility it is considered that the string is replaced even if only a few characters in the string have changed.
