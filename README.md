@@ -68,3 +68,33 @@ RealtimeJSON.on('change', keyPath, handler);
 * **keyPath** when specified, the event handler will only be applied when that specific key has changed.
 
 Because of string immutibility it is considered that the string is replaced even if only a few characters in the string have changed.
+
+# Example
+
+In order to make better sense of the API, we have provided an example of it's usage below:
+
+```html
+<form id="myform" action="">
+First Name: <input type="text" class="fname" name="fname" value="" />
+Last Name: <input type="text" class="lname" name="lname" value="" />
+</form>
+
+<script type="text/javascript">
+var obj = RealtimeJSON.getCollaborativeObject();
+obj.fname = jQuery("#myform .fname").val();
+obj.lname = jQuery("#myform .lname").val();
+var meta = obj.meta = { collaborators: [] };
+meta.collaborators.push('Test');
+
+RealtimeJSON.on('change', 'fname', function (fname) {
+    jQuery("#myform .fname").val(fname);
+});
+RealtimeJSON.on('change', 'lname', function (lname) {
+    jQuery("#myform .lname").val(lname);
+});
+RealtimeJSON.on('change', 'meta.collaborators', function (collaborators) {
+    console.log("Collaborator list changed");
+});
+
+</script>
+```
