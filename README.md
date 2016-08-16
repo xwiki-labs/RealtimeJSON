@@ -1,71 +1,113 @@
-# RealtimeJSON API Specification
+# Listmap API Specification
 
 The purpose of this specification is to create a standard way to synchronize JSON data types (specifically lists, maps and strings) in realtime across multiple computers for collaborative document editing.
 
-The means by which the RealtimeJSON object is created is is not part of the specification, it is specific to the implementation and it is where any configuration and setup must take place.
+The means by which the Listmap object is created is not part of the specification, it is specific to the implementation and it is where any configuration and setup must take place.
 
-Examples of how a RealtimeJSON object might be created:
+Examples of how a Listmap object might be created:
 
 ```javascript
 
-CalebsRealtimeJSON.create("ws://path.to.websocket.server");
-
-YannsRealtimeJSON.create(webRTCIntroducerObject);
-
-someOtherAPI.getRealtimeJSON();
+var proxy = ListMap.create(configuration).proxy;
 
 ```
 
-# RealtimeJSON Functions
+# Create a proxy
 
-## RealtimeJSON.getCollaborativeObject() -> Proxy<{}>
+## Listmap.create -> Object
 
-This function returns a proxy around an empty object, this proxy will intercept any changes to this object and will make proxies out of any objects which are pointed to from this object.
+This function creates the realtime session and the proxy and requires a configuration object :
+
+```javascript
+ListMap.create(config)
+```
+
+The `config` object should contain everything the implementation need to work.
+
+Listmap.create() returns an object containing at least the following property :
+* proxy
+  - the realtime list or map that was created based on your supplied `data` attribute
+
+## Listmap.create().proxy -> Proxy
+
+This function returns an object containing a proxy around an array or an object, this proxy will intercept any changes to this object and will make proxies out of any objects which are pointed to from this object.
 
 When a field of the object is set with another value, for example:
 
 ```javascript
 
-const obj = RealtimeJSON.getCollaborativeObject();
+const proxy = Listmap.create(options).proxy; // Create a new proxy
 
-const unsafeSubobject = { value: 1 };
+const unsafeSubobject = { value: 1 }; // Create a new non-realtime object
 
-const subObject = obj["key"] = unsafeSubobject;
+const subObject = proxy["key"] = unsafeSubobject; // Assign the non-realtime object to key of the proxy
 
 ```
 
 subObject will be a proxy of unsafeSubobject, changes to subObject will be replicated but changes to unsafeSubobject will not.
 
-As strings, booleans and numbers are immutible, this behavior applies only to Array and Object data types, use of RealtimeJSON with non-JSON data types such as undefined or typed arrays will cause an error.
+As strings, booleans and numbers are immutible, this behavior applies only to Array and Object data types, use of Listmap with non-JSON data types such as undefined or typed arrays will cause an error.
 
 
-# RealtimeJSON Events
+# Proxy Events
 
-## ready
+## create
 
-Fired when the connection to the server/peers has been made and the RealtimeJSON object is ready to be edited.
+Fired when the connection to the server/peers has been made but before the proxy is synced with the peers and is editable.
 
 ```javascript
 
-RealtimeJSON.on('ready', handler);
+proxy.on('create', handler);
+
+```
+
+## ready
+
+Fired when the connection to the server/peers has been made and the proxy is fully synxed and ready to be edited.
+
+```javascript
+
+proxy.on('ready', handler);
+
+```
+
+## disconnect
+
+Fired when the connection to the server/peers is lost.
+
+```javascript
+
+proxy.on('disconnect', handler);
 
 ```
 
 ## change
 
-Fired whenever a change comes in to the object or one of it's sub-objects. One change event will be fired for each object/subobject which has changed and an event handler can be called for each specific key with an argument newValue. If no keyPath is specified, the event handler will be called for each change in the object.
-
-* **newValue** is the new value of the changed string, boolean, number, null, object or list.
+Fired whenever a change comes in to the object or one of it's sub-objects. `handler` is a callback, and `path` is an array of property names which would select the targeted property given the root object.
 
 ```javascript
 
-RealtimeJSON.on('change', handler);
-
-RealtimeJSON.on('change', keyPath, handler);
+proxy.on('change', path, handler);
 
 ```
 
-* **keyPath** when specified, the event handler will only be applied when that specific key has changed.
+For example:
+
+```
+var A = {
+    b: [
+        0,
+        1,
+        {
+            c: 5
+        }
+    ]
+};
+```
+
+`c` could be selected given the path `['b', 2, 'c']`.
+
+Changes _bubble up_, so if you were to specify a path `['b', 2]`, changes to `['b', 2, 'c']` would trigger that listener.
 
 Because of string immutibility it is considered that the string is replaced even if only a few characters in the string have changed.
 
@@ -80,20 +122,46 @@ Last Name: <input type="text" class="lname" name="lname" value="" />
 </form>
 
 <script type="text/javascript">
-var obj = RealtimeJSON.getCollaborativeObject();
-obj.fname = jQuery("#myform .fname").val();
-obj.lname = jQuery("#myform .lname").val();
-var meta = obj.meta = { collaborators: [] };
-meta.collaborators.push('Test');
 
-RealtimeJSON.on('change', 'fname', function (fname) {
-    jQuery("#myform .fname").val(fname);
-});
-RealtimeJSON.on('change', 'lname', function (lname) {
-    jQuery("#myform .lname").val(lname);
-});
-RealtimeJSON.on('change', 'meta.collaborators', function (collaborators) {
-    console.log("Collaborator list changed");
+require([
+    '/path/to/configuration',
+    '/path/to/listmap/api.js'
+], function (Config, Listmap) {
+
+    var obj = Listmap.create(Config).proxy;
+    
+    var onReady = function() {
+        var fname = jQuery("#myform .fname");
+        var lname = jQuery("#myform .lname");
+        
+        fname.on('change', function() {
+            if (fname.val() !== obj.fname) {
+                obj.fname = fname.val();
+            }
+        });
+        
+        lname.on('change', function() {
+            if (lname.val() !== obj.lname) {
+                obj.lname = lname.val();
+            }
+        });
+        
+        var meta = obj.meta = { collaborators: [] };
+        meta.collaborators.push('Test');
+        
+        obj.on('change', 'fname', function (fname) {
+            jQuery("#myform .fname").val(fname);
+        });
+        obj.on('change', 'lname', function (lname) {
+            jQuery("#myform .lname").val(lname);
+        });
+        obj.on('change', 'meta.collaborators', function (collaborators) {
+            console.log("Collaborator list changed");
+        });
+    };
+    
+    obj.on('ready', onReady);
+    
 });
 
 </script>
