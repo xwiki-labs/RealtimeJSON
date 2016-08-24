@@ -36,20 +36,20 @@ When a field of the object is set with another value, for example:
 
 ```javascript
 
-const proxy = Listmap.create(options).proxy; // Create a new proxy
+var proxy = Listmap.create(options).proxy; // Create a new proxy
 
-const unsafeSubobject = { value: 1 }; // Create a new non-realtime object
+var subObject = { value: 1 }; // Create a new non-realtime object
 
-const subObject = proxy["key"] = unsafeSubobject; // Assign the non-realtime object to key of the proxy
+proxy["key"] = subObject; // Assign the non-realtime object to key of the proxy
 
 ```
 
-subObject will be a proxy of unsafeSubobject, changes to subObject will be replicated but changes to unsafeSubobject will not.
-
-As strings, booleans and numbers are immutible, this behavior applies only to Array and Object data types, use of Listmap with non-JSON data types such as undefined or typed arrays will cause an error.
-
+subObject will be a proxy, changes to the proxy["key"] object will change subObject and changes to subObject will change proxy["key"]. 
+All these modifications will also be replicated for all the realtime users.
 
 # Proxy Events
+
+These events must be applied on the root proxy. If you want an event listener ("change" or "remove") on a subobject, use the `path` parameter.
 
 ## create
 
@@ -110,6 +110,16 @@ var A = {
 Changes _bubble up_, so if you were to specify a path `['b', 2]`, changes to `['b', 2, 'c']` would trigger that listener.
 
 Because of string immutibility it is considered that the string is replaced even if only a few characters in the string have changed.
+
+## remove
+
+Fired whenever a property is deleted from the proxy. If that property was an object, it fires a `change` event on every property of that object (which is changed to undefined)
+
+```javascript
+
+proxy.on('remove', path, handler);
+
+```
 
 # Example
 
