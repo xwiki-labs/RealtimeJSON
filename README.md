@@ -159,13 +159,13 @@ require([
         var meta = obj.meta = { collaborators: [] };
         meta.collaborators.push('Test');
         
-        obj.on('change', 'fname', function (fname) {
+        obj.on('change', ['fname'], function (fname) {
             jQuery("#myform .fname").val(fname);
         });
-        obj.on('change', 'lname', function (lname) {
+        obj.on('change', ['lname'], function (lname) {
             jQuery("#myform .lname").val(lname);
         });
-        obj.on('change', 'meta.collaborators', function (collaborators) {
+        obj.on('change', ['meta', 'collaborators'], function (collaborators) {
             console.log("Collaborator list changed");
         });
     };
